@@ -1,0 +1,4 @@
+interface:
+  display_name: "Video QA"
+  short_description: "Diagnose playback failures and recommend MP4 conversion."
+  default_prompt: "Use $video-qa to diagnose why this video will not play and recommend a compatible MP4 conversion."
