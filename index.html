@@ -21,7 +21,7 @@
     <h1>视频兼容转换器</h1>
     <p>把不能播放的 MP4 转为兼容性更高的 <strong>H.264 + AAC MP4</strong>。文件只在当前浏览器处理，不会上传到服务器。</p>
     <label class="drop" id="drop-zone" for="file-input">点击选择视频，或将视频拖到这里<br><small id="file-name">支持 MP4、MOV、MKV、AVI、WebM 等常见视频</small></label>
-    <input id="file-input" type="file" accept="video/*">
+    <input id="file-input" type="file" accept="video/*,.mp4,.m4v,.mov,.mkv,.avi,.webm,.flv,.wmv,.mpeg,.mpg,.ts,.m2ts,.mts,.3gp,.ogv,.vob">
     <button id="convert" disabled>转换为兼容 MP4</button><a id="download" class="download">下载转换后的视频</a>
     <progress id="progress" value="0" max="1" hidden></progress>
     <p id="status" aria-live="polite"></p>
@@ -46,7 +46,8 @@
     ffmpeg.on('log', ({ message }) => { if (message.includes('time=')) status.textContent = '正在转换，请不要关闭此页面…'; });
 
     function choose(file) {
-      if (!file || !file.type.startsWith('video/')) { status.textContent = '请选择视频文件。'; return; }
+      const supportedExtension = /\.(mp4|m4v|mov|mkv|avi|webm|flv|wmv|mpeg|mpg|ts|m2ts|mts|3gp|ogv|vob)$/i;
+      if (!file || (!file.type.startsWith('video/') && !supportedExtension.test(file.name))) { status.textContent = '请选择支持的视频文件。'; return; }
       selectedFile = file; button.disabled = false; download.style.display = 'none';
       fileName.textContent = `${file.name}（${(file.size / 1024 / 1024).toFixed(1)} MB）`;
       status.textContent = '准备就绪。';
@@ -71,7 +72,7 @@
         const inputName = `input.${selectedFile.name.split('.').pop() || 'mp4'}`;
         await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
         status.textContent = '正在转换，请不要关闭此页面…';
-        await ffmpeg.exec(['-i', inputName, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'converted.mp4']);
+        await ffmpeg.exec(['-i', inputName, '-map', '0:v:0', '-map', '0:a?', '-c:v', 'libx264', '-preset', 'medium', '-crf', '17', '-pix_fmt', 'yuv420p', '-profile:v', 'high', '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', 'converted.mp4']);
         const data = await ffmpeg.readFile('converted.mp4');
         if (resultUrl) URL.revokeObjectURL(resultUrl);
         resultUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
