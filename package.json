@@ -1,0 +1,14 @@
+{
+  "name": "video-format-converter",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser-based MP4 compatibility converter",
+  "scripts": {
+    "vendor": "node scripts/copy-vendor.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg/core": "0.12.6",
+    "@ffmpeg/ffmpeg": "0.12.10",
+    "@ffmpeg/util": "0.12.1"
+  }
+}

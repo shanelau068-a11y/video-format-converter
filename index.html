@@ -27,8 +27,8 @@
     <p id="status" aria-live="polite"></p>
   </main>
   <script type="module">
-    import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
-    import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+    import { FFmpeg } from './vendor/ffmpeg-ffmpeg/index.js';
+    import { fetchFile, toBlobURL } from './vendor/ffmpeg-util/index.js';
 
     const input = document.querySelector('#file-input');
     const button = document.querySelector('#convert');
@@ -59,7 +59,7 @@
     async function loadFFmpeg() {
       if (loaded) return;
       status.textContent = '正在首次加载转换引擎（约 30 MB）…';
-      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+      const baseURL = './vendor/ffmpeg-core';
       await ffmpeg.load({ coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'), wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm') });
       loaded = true;
     }
@@ -84,4 +84,3 @@
   </script>
 </body>
 </html>
-
