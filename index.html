@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>视频兼容转换器</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Microsoft YaHei", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f7fb; color: #172033; }
+    main { box-sizing: border-box; width: min(680px, calc(100% - 32px)); padding: 36px; border-radius: 18px; background: white; box-shadow: 0 18px 48px #243b661a; }
+    h1 { margin: 0 0 10px; font-size: 28px; } p { line-height: 1.6; color: #536078; }
+    .drop { display: block; margin: 24px 0 16px; padding: 34px 20px; border: 2px dashed #93a4c4; border-radius: 12px; text-align: center; cursor: pointer; }
+    .drop:hover, .drop.drag { background: #eef5ff; border-color: #2563eb; }
+    input { display: none; } button, a.download { border: 0; border-radius: 9px; padding: 12px 18px; font: inherit; font-weight: 650; cursor: pointer; background: #2563eb; color: white; text-decoration: none; }
+    button:disabled { cursor: wait; opacity: .6; } .download { display: none; margin-left: 10px; background: #107a48; }
+    progress { width: 100%; height: 14px; margin-top: 20px; } #status { min-height: 1.6em; font-size: 14px; } small { color: #68758c; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>视频兼容转换器</h1>
+    <p>把不能播放的 MP4 转为兼容性更高的 <strong>H.264 + AAC MP4</strong>。文件只在当前浏览器处理，不会上传到服务器。</p>
+    <label class="drop" id="drop-zone" for="file-input">点击选择视频，或将视频拖到这里<br><small id="file-name">支持 MP4、MOV、MKV、AVI、WebM 等常见视频</small></label>
+    <input id="file-input" type="file" accept="video/*">
+    <button id="convert" disabled>转换为兼容 MP4</button><a id="download" class="download">下载转换后的视频</a>
+    <progress id="progress" value="0" max="1" hidden></progress>
+    <p id="status" aria-live="polite"></p>
+  </main>
+  <script type="module">
+    import { FFmpeg } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js';
+    import { fetchFile, toBlobURL } from 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js';
+
+    const input = document.querySelector('#file-input');
+    const button = document.querySelector('#convert');
+    const download = document.querySelector('#download');
+    const status = document.querySelector('#status');
+    const progress = document.querySelector('#progress');
+    const fileName = document.querySelector('#file-name');
+    const dropZone = document.querySelector('#drop-zone');
+    const ffmpeg = new FFmpeg();
+    let loaded = false;
+    let selectedFile;
+    let resultUrl;
+
+    ffmpeg.on('progress', ({ progress: value }) => { progress.value = Math.max(0, Math.min(1, value)); });
+    ffmpeg.on('log', ({ message }) => { if (message.includes('time=')) status.textContent = '正在转换，请不要关闭此页面…'; });
+
+    function choose(file) {
+      if (!file || !file.type.startsWith('video/')) { status.textContent = '请选择视频文件。'; return; }
+      selectedFile = file; button.disabled = false; download.style.display = 'none';
+      fileName.textContent = `${file.name}（${(file.size / 1024 / 1024).toFixed(1)} MB）`;
+      status.textContent = '准备就绪。';
+    }
+    input.addEventListener('change', () => choose(input.files[0]));
+    ['dragenter', 'dragover'].forEach(type => dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.add('drag'); }));
+    ['dragleave', 'drop'].forEach(type => dropZone.addEventListener(type, event => { event.preventDefault(); dropZone.classList.remove('drag'); }));
+    dropZone.addEventListener('drop', event => choose(event.dataTransfer.files[0]));
+
+    async function loadFFmpeg() {
+      if (loaded) return;
+      status.textContent = '正在首次加载转换引擎（约 30 MB）…';
+      const baseURL = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/esm';
+      await ffmpeg.load({ coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'), wasmURL: await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm') });
+      loaded = true;
+    }
+    button.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      button.disabled = true; progress.hidden = false; progress.value = 0; download.style.display = 'none';
+      try {
+        await loadFFmpeg();
+        const inputName = `input.${selectedFile.name.split('.').pop() || 'mp4'}`;
+        await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+        status.textContent = '正在转换，请不要关闭此页面…';
+        await ffmpeg.exec(['-i', inputName, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'converted.mp4']);
+        const data = await ffmpeg.readFile('converted.mp4');
+        if (resultUrl) URL.revokeObjectURL(resultUrl);
+        resultUrl = URL.createObjectURL(new Blob([data.buffer], { type: 'video/mp4' }));
+        download.href = resultUrl; download.download = `${selectedFile.name.replace(/\.[^.]+$/, '')}-compatible.mp4`; download.style.display = 'inline-block';
+        status.textContent = '转换完成，可以下载。';
+      } catch (error) {
+        console.error(error); status.textContent = '转换失败：文件可能已损坏、编码不受支持，或浏览器内存不足。建议使用较小文件重试。';
+      } finally { button.disabled = false; progress.hidden = true; }
+    });
+  </script>
+</body>
+</html>
+
