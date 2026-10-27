@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-27",
+  "repository": "video-format-converter",
+  "defaultBranch": "master",
+  "visibility": "public",
+  "sourceCommit": "f82c52299a84be2e6fb7e78fce3c00dc27a02ce9",
+  "status": "已通过所列检查",
+  "checks": [
+    {
+      "command": "HTTP GET index.html and local src/href resources under repository subpath",
+      "result": "通过",
+      "resources": 0
+    }
+  ],
+  "scope": [
+    "需要WASM/Worker和足够内存。单线程与多线程核心的跨域隔离要求不同，应按当前代码确认；本轮不上传真实视频。"
+  ],
+  "syntax": {
+    "javascript": 2,
+    "python": 0,
+    "powershell": 0
+  },
+  "runtime": {
+    "node": "24.12.0",
+    "python": "3.12.14",
+    "os": "Windows"
+  }
+}
